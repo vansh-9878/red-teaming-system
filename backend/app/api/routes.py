@@ -68,6 +68,9 @@ async def chat_endpoint(request: ChatRequest):
             temperature=request.temperature or 0.7,
             max_tokens=request.max_tokens or 1024
         )
+        # Strip thinking tags if present
+        if "</think>" in raw_response.lower():
+            raw_response = raw_response.split("</think>")[-1].strip()
     except Exception as e:
         logger.error(f"Target provider generation error: {e}")
         raise HTTPException(
@@ -175,7 +178,7 @@ async def delete_guardrail_rule(rule_id: str):
 
 @router.post("/provider")
 async def switch_provider(payload: ProviderSwitchRequest):
-    """Switches the active LLM backend provider at runtime (mock, ollama, grok)."""
+    """Switches the active LLM backend provider at runtime (groq, ollama, grok)."""
     try:
         new_prov = target_module.create_provider(
             provider_name=payload.provider,
@@ -191,3 +194,41 @@ async def switch_provider(payload: ProviderSwitchRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed switching provider: {str(e)}")
+
+
+@router.get("/config/models")
+async def get_model_config():
+    """Returns current model configuration for Target, Attacker Agents, and Judge."""
+    from app.core.model_config import model_config_manager
+    return model_config_manager.config.model_dump()
+
+
+@router.post("/config/models")
+async def update_model_config(payload: dict):
+    """Updates model_config.json live and refreshes active Target, Attacker, and Judge instances."""
+    from app.core.model_config import model_config_manager, SentinelModelConfig
+    from app.attackers import attacker_squad
+    import app.judge as judge_module
+
+    try:
+        new_cfg = SentinelModelConfig.model_validate(payload)
+        model_config_manager.save(new_cfg)
+        model_config_manager.config = new_cfg
+
+        # Refresh Target Provider
+        target_module.active_provider = target_module.create_provider()
+
+        # Refresh Attacker Squad
+        attacker_squad.initialize_squad()
+
+        # Refresh Judge Scorer
+        judge_module.active_judge = judge_module.create_judge()
+
+        return {
+            "status": "updated",
+            "target": target_module.active_provider.model_name,
+            "judge": judge_module.active_judge.model_name,
+            "config": new_cfg.model_dump()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed updating model config: {str(e)}")

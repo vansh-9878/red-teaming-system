@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.routes import router
 from app.api.judge_routes import judge_router
+from app.api.attacker_routes import attacker_router
 import app.target as target_module
 import app.judge as judge_module
+import app.attackers as attackers_module
 
 # Configure logging
 logging.basicConfig(
@@ -23,6 +25,7 @@ async def lifespan(app: FastAPI):
     logger.info("  SentinelLoop — Core Service Initialized")
     logger.info(f"  Target Provider : {target_module.active_provider.__class__.__name__} ({target_module.active_provider.model_name})")
     logger.info(f"  Judge Provider  : {judge_module.active_judge.__class__.__name__} ({judge_module.active_judge.model_name})")
+    logger.info(f"  Attacker Squad  : {len(attackers_module.attacker_squad.agents)} specialist agents active")
     logger.info(f"  System Prompt   : {settings.SYSTEM_PROMPT_PATH}")
     logger.info(f"  Guardrail Config: {settings.GUARDRAILS_CONFIG_PATH}")
     logger.info("=" * 60)
@@ -33,8 +36,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SentinelLoop — Core System",
     description=(
-        "Attackable, patchable Target Chatbot Service + LLM-as-a-Judge Scorer "
-        "supporting continuous 0-1 evaluation, hot-reloads, and multi-provider execution."
+        "Attackable, patchable Target Chatbot Service + LLM-as-a-Judge Scorer + Adaptive Attacker Squad "
+        "supporting continuous 0-1 evaluation, hot-reloads, and multi-agent red-teaming."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -51,6 +54,7 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(judge_router)
+app.include_router(attacker_router)
 
 
 @app.get("/")

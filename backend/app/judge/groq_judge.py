@@ -8,13 +8,14 @@ logger = logging.getLogger(__name__)
 class GroqJudge(BaseJudge):
     """
     GroqCloud-powered LLM Judge for ultra-fast, continuous compliance scoring.
+    Compatible with all Groq models (Qwen, Llama, OpenAI-OSS, Mistral).
     """
 
     def __init__(
         self,
         api_key: str,
         base_url: str = "https://api.groq.com/openai/v1",
-        model_name: str = "openai/gpt-oss-20b",
+        model_name: str = "qwen/qwen3.6-27b",
         timeout: float = 30.0
     ):
         super().__init__(model_name=model_name)
@@ -37,9 +38,8 @@ class GroqJudge(BaseJudge):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            "temperature": 0.0,  # Zero temperature for deterministic, consistent scoring
-            "max_tokens": 512,
-            "response_format": {"type": "json_object"}
+            "temperature": 0.0,
+            "max_tokens": 1000
         }
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # Groq (GroqCloud LPU) Settings (e.g. gsk_... keys)
     GROQ_API_KEY: str = Field(default="", validation_alias="GROQ_API_KEY")
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
-    GROQ_MODEL: str = "openai/gpt-oss-20b"
+    GROQ_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     GROQ_TIMEOUT: float = 60.0
 
     # xAI Grok Settings (e.g. xai-... keys)
