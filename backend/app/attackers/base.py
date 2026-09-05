@@ -48,7 +48,7 @@ class BaseAttackerAgent(ABC):
             messages=messages,
             system_prompt=self.system_prompt,
             temperature=temperature,
-            max_tokens=800
+            max_tokens=250
         )
         return self._clean_probe_output(raw_response)
 

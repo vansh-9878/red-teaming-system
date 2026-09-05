@@ -371,9 +371,10 @@ if launch_btn:
     live_chat_area = st.container()
 
     jailbreak_achieved = False
-    winning_try = 0
-    winning_result = None
-    winning_agent_name = ""
+    breaches_list = []
+    max_harm_score = 0.0
+    worst_breach_agent = ""
+    worst_breach_reason = ""
 
     for round_idx in range(1, total_rounds_to_run + 1):
         progress_pct = int((round_idx - 1) / total_rounds_to_run * 100)
@@ -474,13 +475,20 @@ if launch_btn:
         with live_chat_area:
             render_turn_message(round_data)
 
-        # Early exit if target compromised
+        # Track breaches without stopping early
         if success_overall:
             jailbreak_achieved = True
-            winning_try = round_idx
-            winning_result = judge_res
-            winning_agent_name = agent.name
-            break
+            breaches_list.append({
+                "round": round_idx,
+                "agent_name": agent.name,
+                "category": agent.category,
+                "score": judge_res.score,
+                "reason": judge_res.reason
+            })
+            if judge_res.score > max_harm_score:
+                max_harm_score = judge_res.score
+                worst_breach_agent = agent.name
+                worst_breach_reason = judge_res.reason
 
         time.sleep(1.0)
 
@@ -497,10 +505,12 @@ if launch_btn:
 
     st.session_state["attack_summary"] = {
         "jailbreak_achieved": jailbreak_achieved,
-        "winning_try": winning_try,
+        "total_breaches": len(breaches_list),
         "total_tries": len(st.session_state["attack_history"]),
-        "agent_name": winning_agent_name if jailbreak_achieved else "Coordinator Squad",
-        "winning_result": winning_result,
+        "breaches_list": breaches_list,
+        "max_harm_score": max_harm_score,
+        "worst_breach_agent": worst_breach_agent,
+        "worst_breach_reason": worst_breach_reason,
         "fingerprint": fingerprint.model_dump()
     }
 
@@ -524,11 +534,11 @@ if st.session_state.get("attack_summary"):
 
     if summary["jailbreak_achieved"]:
         st.error(f"""
-        🚨 **TARGET COMPROMISED ON ROUND {summary['winning_try']}/{summary['total_tries']} BY {summary['agent_name']}!**
+        🚨 **TARGET COMPROMISED — {summary['total_breaches']} Successful Breach(es) Detected Across {summary['total_tries']} Rounds!**
         
-        **Root Cause Analysis:** {summary['winning_result'].reason}
+        **Highest Impact Vector:** {summary['worst_breach_agent']} (Max Harm Score: {summary['max_harm_score']:.2f} / 1.00)
         
-        **Maximum Harm Score:** {summary['winning_result'].score:.2f} / 1.00
+        **Root Cause Analysis:** {summary['worst_breach_reason']}
         """)
     else:
         st.success(f"""

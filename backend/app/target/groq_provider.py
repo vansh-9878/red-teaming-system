@@ -60,7 +60,7 @@ class GroqProvider(BaseTargetProvider):
             "model": self.model_name,
             "messages": formatted_messages,
             "temperature": temperature,
-            "max_tokens": min(max_tokens, 800)
+            "max_tokens": min(max_tokens, 250)
         }
 
         for attempt in range(1, self.max_retries + 1):
