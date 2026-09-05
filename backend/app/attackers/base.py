@@ -77,6 +77,20 @@ class BaseAttackerAgent(ABC):
         if fence_match:
             cleaned = fence_match.group(1).strip()
 
+        # Check if the generator LLM itself refused to generate the test case
+        refusal_patterns = [
+            r"^i(?:'m| am)? sorry,?(?: but)? (?:i )?can(?:'t|not)",
+            r"^i cannot fulfill this request",
+            r"^as an ai(?: language model)?,?(?: i cannot)?",
+            r"^i am unable to help",
+            r"^i can(?:'t|not) assist with",
+            r"^i am unable to fulfill"
+        ]
+        for pattern in refusal_patterns:
+            if re.search(pattern, cleaned, re.IGNORECASE):
+                logger.warning(f"[AttackerCleaner] Generator LLM refused prompt creation ('{cleaned[:40]}...'). Falling back to specialist template.")
+                return ""
+
         return cleaned
 
     @abstractmethod

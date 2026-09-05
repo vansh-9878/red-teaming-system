@@ -6,9 +6,11 @@ from app.core.config import settings
 from app.api.routes import router
 from app.api.judge_routes import judge_router
 from app.api.attacker_routes import attacker_router
+from app.api.coordinator_routes import router as coordinator_router
 import app.target as target_module
 import app.judge as judge_module
 import app.attackers as attackers_module
+import app.coordinator as coordinator_module
 
 # Configure logging
 logging.basicConfig(
@@ -55,6 +57,7 @@ app.add_middleware(
 app.include_router(router)
 app.include_router(judge_router)
 app.include_router(attacker_router)
+app.include_router(coordinator_router)
 
 
 @app.get("/")

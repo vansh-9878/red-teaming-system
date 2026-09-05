@@ -6,6 +6,7 @@ __pycache__/
 model_config.json
 .env.example
 .vscode
+backend/app/core/vulnerability_fingerprints.json
 
 # C extensions
 *.so
