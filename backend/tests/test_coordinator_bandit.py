@@ -16,32 +16,28 @@ def client():
 
 
 def test_bandit_cold_start_initialization():
-    """Verify Cold-Start pulls every available arm at least once before pure exploitation."""
-    scheduler = UCBBanditScheduler(novelty_frequency=100, starvation_threshold=100)
-    expected_arms = ["persona", "persuasion", "escalation", "obfuscation"]
+    """Verify Cold-Start initializes all arms while honoring Escalation multi-turn trajectory bursts."""
+    scheduler = UCBBanditScheduler(novelty_frequency=100, starvation_threshold=100, escalation_burst_length=3)
+    expected_arms = {"persona", "persuasion", "escalation", "obfuscation"}
 
     pulled_arms = []
-    for _ in range(len(expected_arms)):
+    # 3 single arms + 3 consecutive escalation turns = 6 total initial turns
+    for _ in range(6):
         decision = scheduler.select_next_agent()
-        assert decision.selection_reason == "cold_start"
-        assert decision.chosen_agent in expected_arms
         pulled_arms.append(decision.chosen_agent)
-        # Update with baseline reward
         scheduler.update_reward(decision.chosen_agent, reward=0.2)
 
-    # Ensure all 4 unique arms were pulled during cold start
-    assert set(pulled_arms) == set(expected_arms)
-    assert scheduler.total_rounds == 4
+    assert set(pulled_arms) == expected_arms
+    assert scheduler.total_rounds == 6
 
 
 def test_bandit_ucb_exploitation():
     """Verify that arms with higher rewards receive higher UCB scores and are exploited."""
-    scheduler = UCBBanditScheduler(novelty_frequency=100, starvation_threshold=100)
+    scheduler = UCBBanditScheduler(novelty_frequency=100, starvation_threshold=100, escalation_burst_length=1)
 
-    # 1. Complete cold start
+    # 1. Complete cold start (with burst length=1 for pure single-turn test)
     for _ in range(4):
         decision = scheduler.select_next_agent()
-        # Give 'obfuscation' a high reward (0.95), others low rewards (0.1)
         reward = 0.95 if decision.chosen_agent == "obfuscation" else 0.1
         scheduler.update_reward(decision.chosen_agent, reward=reward, is_jailbreak=(reward > 0.6))
 
@@ -75,36 +71,42 @@ def test_novelty_injection_rule():
 
 
 def test_escalation_multi_turn_trajectory_locking():
-    """Verify that when Escalation is selected during campaign, it executes 3 consecutive turns before switching."""
+    """Verify that when Escalation is selected, it executes 3 consecutive turns before switching."""
     scheduler = UCBBanditScheduler(novelty_frequency=100, starvation_threshold=100, escalation_burst_length=3)
     scheduler.reset()
 
-    # 1. Complete cold-start for all 4 arms
-    for _ in range(4):
-        decision = scheduler.select_next_agent()
-        # Give escalation a high reward so UCB selects it next
-        reward = 0.9 if decision.chosen_agent == "escalation" else 0.1
-        scheduler.update_reward(decision.chosen_agent, reward)
+    # 1. First arm is persona
+    d0 = scheduler.select_next_agent()
+    scheduler.update_reward(d0.chosen_agent, 0.1)
 
-    # 2. Next decision triggers Escalation (Turn 1 of burst)
+    # 2. Second arm is persuasion
     d1 = scheduler.select_next_agent()
-    assert d1.chosen_agent == "escalation"
-    scheduler.update_reward("escalation", 0.2)
+    scheduler.update_reward(d1.chosen_agent, 0.1)
 
-    # 3. Next decision MUST continue Escalation (Turn 2 of burst)
+    # 3. Third arm is escalation (Turn 1 of burst)
     d2 = scheduler.select_next_agent()
     assert d2.chosen_agent == "escalation"
-    assert "trajectory_burst_turn_2" in d2.selection_reason
-    scheduler.update_reward("escalation", 0.3)
+    assert d2.selection_reason == "cold_start"
+    scheduler.update_reward("escalation", 0.2)
 
-    # 4. Next decision MUST continue Escalation (Turn 3 of burst)
+    # 4. MUST continue Escalation (Turn 2 of burst)
     d3 = scheduler.select_next_agent()
     assert d3.chosen_agent == "escalation"
-    assert "trajectory_burst_turn_3" in d3.selection_reason
+    assert "trajectory_burst_turn_2" in d3.selection_reason
     scheduler.update_reward("escalation", 0.3)
 
-    # 5. After 3 turns, trajectory lock is released
+    # 5. MUST continue Escalation (Turn 3 of burst)
+    d4 = scheduler.select_next_agent()
+    assert d4.chosen_agent == "escalation"
+    assert "trajectory_burst_turn_3" in d4.selection_reason
+    scheduler.update_reward("escalation", 0.3)
+
+    # 6. After 3 turns, trajectory lock is released and cold-start continues for obfuscation
     assert scheduler.locked_agent is None
+    d5 = scheduler.select_next_agent()
+    assert d5.chosen_agent == "obfuscation"
+    assert d5.selection_reason == "cold_start"
+
 
 
 def test_vulnerability_fingerprint_generation_and_persistence(tmp_path):

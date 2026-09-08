@@ -9,6 +9,8 @@ from app.target.grok_provider import GrokProvider
 from app.target.mock_provider import MockProvider
 from app.target.prompt_manager import PromptManager
 from app.target.guardrails import GuardrailEngine
+from app.schemas.chat import ChatMessage
+
 
 logger = logging.getLogger(__name__)
 

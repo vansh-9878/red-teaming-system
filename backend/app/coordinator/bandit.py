@@ -93,29 +93,7 @@ class UCBBanditScheduler:
         empirical_means = {k: round(arm.mean_reward, 4) for k, arm in self.arms.items()}
         pull_counts = {k: arm.pulls for k, arm in self.arms.items()}
 
-        # 1. Cold-Start Phase: Ensure all arms are pulled at least once for baseline initialization
-        unpulled = [k for k in self.arm_keys if self.arms[k].pulls == 0]
-        if unpulled:
-            chosen_arm = unpulled[0]
-            reason = "cold_start"
-            explanation = (
-                f"Cold-Start Phase: Initializing unpulled specialist arm '{chosen_arm}' "
-                f"(Attempt 1/{len(self.arm_keys)} in baseline round-robin)."
-            )
-            decision = CoordinatorDecision(
-                round_index=current_round,
-                chosen_agent=chosen_arm,
-                agent_name=self.arms[chosen_arm].name,
-                selection_reason=reason,
-                explanation=explanation,
-                bandit_weights=ucb_weights,
-                empirical_means=empirical_means,
-                pull_counts=pull_counts
-            )
-            self.decisions_history.append(decision)
-            return decision
-
-        # 2. Check Multi-Turn Trajectory Lock (e.g. Escalation Crescendo burst)
+        # 1. Check Multi-Turn Trajectory Lock (FIRST PRIORITY: If Escalation Agent is in a burst, MUST continue consecutively)
         if self.locked_agent and self.burst_step < self.burst_total:
             self.burst_step += 1
             chosen_arm = self.locked_agent
@@ -138,6 +116,30 @@ class UCBBanditScheduler:
             if self.burst_step >= self.burst_total:
                 self.locked_agent = None  # Burst completed
             return decision
+
+        # 2. Cold-Start Phase: Ensure all arms are pulled at least once for baseline initialization
+        unpulled = [k for k in self.arm_keys if self.arms[k].pulls == 0]
+        if unpulled:
+            chosen_arm = unpulled[0]
+            reason = "cold_start"
+            explanation = (
+                f"Cold-Start Phase: Initializing unpulled specialist arm '{chosen_arm}' "
+                f"(Attempt 1/{len(self.arm_keys)} in baseline round-robin)."
+            )
+            self._check_and_arm_trajectory_lock(chosen_arm)
+            decision = CoordinatorDecision(
+                round_index=current_round,
+                chosen_agent=chosen_arm,
+                agent_name=self.arms[chosen_arm].name,
+                selection_reason=reason,
+                explanation=explanation,
+                bandit_weights=ucb_weights,
+                empirical_means=empirical_means,
+                pull_counts=pull_counts
+            )
+            self.decisions_history.append(decision)
+            return decision
+
 
         # 3. Novelty-Injection Rule (STAR 2026):
         # Check for starved arms (not pulled in >= starvation_threshold rounds)
