@@ -1,8 +1,11 @@
+import logging
 import random
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from app.attackers.base import BaseAttackerAgent
 from app.schemas.attacker import ProbeResult
 from app.target.base import BaseTargetProvider
+from app.attackers.data.fallback_templates import sample_fallback_prompt
+
 from app.attackers.tools.obfuscation import (
     build_cipher_prompt,
     wrap_delimiter_tags,
@@ -29,7 +32,7 @@ AUTONOMOUS_OBFUSCATION_OBJECTIVES = [
 class ObfuscationAgent(BaseAttackerAgent):
     """
     Specialist Agent evaluating tokenizer robustness, cipher translation,
-    and synthetic delimiter injections using built-in transformation tools.
+    and synthetic delimiter injections using built-in transformation tools and 35+ curated templates.
     Dynamically rotates transformation algorithms upon receiving refusals.
     """
 
@@ -42,49 +45,25 @@ class ObfuscationAgent(BaseAttackerAgent):
             system_prompt=OBFUSCATION_SYSTEM_PROMPT,
             llm_provider=llm_provider
         )
-        self.tool_strategies = [
-            "delimiter_bracket_system",
-            "base64_cipher",
-            "rot13_cipher",
-            "delimiter_im_start",
-            "leetspeak_encoding",
-            "character_reversal"
-        ]
-        self._strategy_index = 0
         self.current_target_goal = random.choice(AUTONOMOUS_OBFUSCATION_OBJECTIVES)
 
-    def _get_next_strategy(self) -> str:
-        strat = self.tool_strategies[self._strategy_index % len(self.tool_strategies)]
-        self._strategy_index += 1
-        return strat
-
-    def _apply_tool_strategy(self, strategy: str, goal: str) -> str:
-        if strategy == "base64_cipher":
-            return build_cipher_prompt(goal, "base64")
-        elif strategy == "rot13_cipher":
-            return build_cipher_prompt(goal, "rot13")
-        elif strategy == "delimiter_im_start":
-            return wrap_delimiter_tags(goal, "im_start")
-        elif strategy == "delimiter_bracket_system":
-            return wrap_delimiter_tags(goal, "bracket_system")
-        elif strategy == "leetspeak_encoding":
-            return build_cipher_prompt(goal, "leetspeak")
-        elif strategy == "character_reversal":
-            return build_cipher_prompt(goal, "reverse")
-        else:
-            return build_cipher_prompt(goal, "base64")
+    def _get_fallback_prompt(self, goal: str) -> Tuple[str, str]:
+        return sample_fallback_prompt(
+            category="obfuscation",
+            goal=goal,
+            previously_used=self.previously_used_probes
+        )
 
     async def generate_probe(self, goal: Optional[str] = None, target_context: Optional[str] = None) -> ProbeResult:
         self.current_target_goal = goal or self.current_target_goal
-        strategy = self._get_next_strategy()
-        probe_text = self._apply_tool_strategy(strategy, self.current_target_goal)
+        probe_text, strategy_name = self._get_fallback_prompt(self.current_target_goal)
 
         return ProbeResult(
             agent_id=self.agent_id,
             probe=probe_text,
-            strategy_used=f"obfuscation_{strategy}",
+            strategy_used=strategy_name,
             is_adaptation=False,
-            metadata={"tool_strategy": strategy, "target_goal": self.current_target_goal}
+            metadata={"target_goal": self.current_target_goal}
         )
 
     async def adapt_from_refusal(
@@ -96,22 +75,21 @@ class ObfuscationAgent(BaseAttackerAgent):
         target_context: Optional[str] = None,
     ) -> ProbeResult:
         """
-        Rotates to an entirely new cipher or encoding tool from the transformation suite.
+        Rotates to an entirely new cipher, delimiter, or encoding tool from the 35+ transformation suite.
         """
         self.current_target_goal = goal or self.current_target_goal
-        strategy = self._get_next_strategy()
-        probe_text = self._apply_tool_strategy(strategy, self.current_target_goal)
+        probe_text, strategy_name = self._get_fallback_prompt(self.current_target_goal)
 
         return ProbeResult(
             agent_id=self.agent_id,
             probe=probe_text,
-            strategy_used=f"obfuscation_{strategy}_adaptive_rewrite",
+            strategy_used=f"{strategy_name}_adaptive",
             is_adaptation=True,
             metadata={
-                "tool_strategy": strategy,
                 "target_goal": self.current_target_goal,
                 "previous_probe": last_probe,
                 "previous_refusal": refusal_text,
                 "diagnosed_reason": judge_reason
             }
         )
+
