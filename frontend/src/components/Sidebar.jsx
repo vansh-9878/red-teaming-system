@@ -12,7 +12,9 @@ import {
   Flame,
   BarChart3,
   Search,
-  MessageSquare
+  MessageSquare,
+  Wrench,
+  Settings
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -32,7 +34,8 @@ export default function Sidebar({
   onStartCampaign,
   onStopCampaign,
   onReset,
-  modelsInfo
+  modelsInfo,
+  onOpenModelConfig
 }) {
   const agentsList = [
     { id: 'persona', name: '🎭 Persona / Roleplay Specialist', desc: 'Screenplays, DAN, fictional framing' },
@@ -147,13 +150,57 @@ export default function Sidebar({
             <Search size={14} />
             Inspect
           </button>
+          <button
+            onClick={() => setActiveTab('patcher')}
+            style={{
+              flex: 1,
+              padding: '0.45rem 0.6rem',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              backgroundColor: activeTab === 'patcher' ? '#412D15' : 'transparent',
+              color: activeTab === 'patcher' ? '#E1DCC9' : '#8E8270',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Wrench size={14} />
+            Patches
+          </button>
         </div>
       </div>
 
       {/* Active Models Info Box */}
       <div style={{ padding: '1rem', borderBottom: '1px solid #412D15' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#A89E8C', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.04em' }}>
-          Active Model Substrates
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#A89E8C', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Active Model Substrates
+          </span>
+          <button
+            onClick={onOpenModelConfig}
+            title="Configure Models & API Keys"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#D97706',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              padding: '2px 4px',
+              borderRadius: '4px'
+            }}
+          >
+            <Settings size={12} />
+            Edit
+          </button>
         </div>
         <div style={{
           backgroundColor: '#140D07',
@@ -168,19 +215,23 @@ export default function Sidebar({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Target size={13} color="#D97706" />
             <span style={{ color: '#8E8270' }}>Target:</span>
-            <span style={{ color: '#E1DCC9', fontWeight: 600, fontFamily: 'monospace' }}>{modelsInfo.target}</span>
+            <span style={{ color: '#E1DCC9', fontWeight: 600, fontFamily: 'monospace', fontSize: '0.73rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{modelsInfo.target}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Cpu size={13} color="#D97706" />
             <span style={{ color: '#8E8270' }}>Attacker:</span>
-            <span style={{ color: '#E1DCC9', fontWeight: 600, fontFamily: 'monospace' }}>{modelsInfo.attacker}</span>
+            <span style={{ color: '#E1DCC9', fontWeight: 600, fontFamily: 'monospace', fontSize: '0.73rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{modelsInfo.attacker}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Scale size={13} color="#D97706" />
             <span style={{ color: '#8E8270' }}>Judge:</span>
-            <span style={{ color: '#E1DCC9', fontWeight: 600, fontFamily: 'monospace' }}>{modelsInfo.judge}</span>
+            <span style={{ color: '#E1DCC9', fontWeight: 600, fontFamily: 'monospace', fontSize: '0.73rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{modelsInfo.judge}</span>
           </div>
-
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Wrench size={13} color="#2A9D8F" />
+            <span style={{ color: '#8E8270' }}>Patcher:</span>
+            <span style={{ color: '#E1DCC9', fontWeight: 600, fontFamily: 'monospace', fontSize: '0.73rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{modelsInfo.patcher || 'qwen/qwen3.6-27b (GROQ)'}</span>
+          </div>
         </div>
       </div>
 

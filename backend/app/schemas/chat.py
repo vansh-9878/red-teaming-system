@@ -23,7 +23,7 @@ class ChatRequest(BaseModel):
 
 class GuardrailRule(BaseModel):
     id: str = Field(..., description="Unique identifier for the guardrail rule")
-    type: Literal["keyword", "regex", "delimiter", "category_framing", "semantic_pattern"] = Field(
+    type: Literal["keyword", "regex", "delimiter", "category_framing", "semantic_pattern", "semantic_similarity"] = Field(
         ..., description="Guardrail inspection mechanism"
     )
     pattern: str = Field(..., description="Keyword string, regex expression, or category tag to detect")

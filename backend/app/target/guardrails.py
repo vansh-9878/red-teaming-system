@@ -91,6 +91,19 @@ class GuardrailEngine:
             # Substring / pattern check for specific framing idioms (e.g. DAN, pretend you are, hypothetically)
             return pattern in target_text
 
+        elif rule.type == "semantic_similarity":
+            # Semantic similarity matching against exemplar probe
+            exemplar = pattern
+            words_target = set(re.findall(r'\w+', target_text))
+            words_exemplar = set(re.findall(r'\w+', exemplar))
+            if not words_target or not words_exemplar:
+                return False
+            intersection = len(words_target & words_exemplar)
+            union = len(words_target | words_exemplar)
+            jaccard = intersection / union if union > 0 else 0.0
+            overlap_ratio = intersection / min(len(words_target), len(words_exemplar))
+            return jaccard >= 0.40 or overlap_ratio >= 0.60
+
         return False
 
     def inspect_input(self, text: str, history_texts: Optional[List[str]] = None) -> GuardrailTriggeredInfo:

@@ -16,8 +16,10 @@ from app.schemas.coordinator import (
 )
 from app.attackers import attacker_squad
 from app.schemas.chat import ChatMessage
+from app.diagnostic import diagnostic_engine
 import app.target as target_module
 import app.judge as judge_module
+from app.patcher import patch_engine
 
 logger = logging.getLogger(__name__)
 
@@ -194,13 +196,25 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                     history = agent.get_conversation_history() if hasattr(agent, "get_conversation_history") else []
                     active_prompt, prompt_hash = target_module.prompt_manager.get_prompt()
 
-                    # Query Target Provider
-                    model_reply = await target_module.active_provider.generate_response(
-                        messages=[*history, ChatMessage(role="user", content=probe_res.probe)],
-                        system_prompt=active_prompt,
-                        temperature=0.7,
-                        max_tokens=600
-                    )
+                    # Query Target Provider (with 35s timeout to prevent hanging on modified prompts)
+                    try:
+                        model_reply = await asyncio.wait_for(
+                            target_module.active_provider.generate_response(
+                                messages=[*history, ChatMessage(role="user", content=probe_res.probe)],
+                                system_prompt=active_prompt,
+                                temperature=0.7,
+                                max_tokens=600
+                            ),
+                            timeout=35.0
+                        )
+                        if "</think>" in model_reply.lower():
+                            model_reply = model_reply.split("</think>")[-1].strip()
+                    except asyncio.TimeoutError:
+                        logger.warning(f"[CoordinatorWS] Target response timed out on round {round_idx}.")
+                        model_reply = "I cannot fulfill this request as the processing timed out under current constraints."
+                    except Exception as target_err:
+                        logger.error(f"[CoordinatorWS] Target generation error on round {round_idx}: {target_err}")
+                        model_reply = f"Error generating response: {str(target_err)}"
 
                     await websocket.send_json({
                         "type": "target_replied",
@@ -248,18 +262,44 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                             is_jailbreak=success_overall
                         )
 
+                    diagnosis_payload = None
+                    applied_patch_payload = None
                     if success_overall:
-                        breaches_list.append({
+                        diagnosis_res = diagnostic_engine.diagnose_round({
                             "round": round_idx,
+                            "agent_key": active_agent_key,
                             "agent_name": agent.name,
-                            "score": judge_res.score,
-                            "reason": judge_res.reason
+                            "category": agent.category,
+                            "probe": probe_res.probe,
+                            "response": model_reply,
+                            "reason": judge_res.reason,
+                            "score": judge_res.score
                         })
+                        diagnosis_payload = diagnosis_res.model_dump()
+                        breaches_list.append(diagnosis_payload)
                         if judge_res.score > max_harm_score:
                             max_harm_score = judge_res.score
                             worst_agent = agent.name
 
-                    # 7. Send Round Completed Event (Contains full hover metadata!)
+                        # Live Auto-Patching: Immediately synthesize and apply adaptive defense before next round
+                        try:
+                            patch_res = await patch_engine.generate_and_apply_patch_async(
+                                diagnosis=diagnosis_res,
+                                use_llm=True
+                            )
+                            applied_patch_payload = patch_res.model_dump()
+                            logger.info(f"[CoordinatorWS] Auto-applied patch {patch_res.patch_id} ({patch_res.patch_type}) for round {round_idx}")
+                            await websocket.send_json({
+                                "type": "patch_auto_applied",
+                                "round": round_idx,
+                                "agent_name": agent.name,
+                                "category": agent.category,
+                                "patch": applied_patch_payload
+                            })
+                        except Exception as patch_err:
+                            logger.error(f"[CoordinatorWS] Failed to auto-apply patch on round {round_idx}: {patch_err}")
+
+                    # 7. Send Round Completed Event (Contains full hover metadata & Module 5 diagnosis!)
                     await websocket.send_json({
                         "type": "round_completed",
                         "round": round_idx,
@@ -279,6 +319,7 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                         "selection_reason": selection_reason,
                         "selection_explanation": selection_explanation,
                         "latency_ms": judge_res.latency_ms,
+                        "diagnosis": diagnosis_payload,
                         "bandit_state": coordinator_engine.scheduler.get_state_summary()
                     })
 

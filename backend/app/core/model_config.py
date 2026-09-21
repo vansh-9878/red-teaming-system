@@ -39,6 +39,9 @@ class SentinelModelConfig(BaseModel):
     judge_scorer: ModelRoleConfig = Field(default_factory=lambda: ModelRoleConfig(
         provider="groq", model="qwen/qwen3.6-27b", base_url="https://api.groq.com/openai/v1"
     ))
+    patch_generator: ModelRoleConfig = Field(default_factory=lambda: ModelRoleConfig(
+        provider="groq", model="qwen/qwen3.6-27b", base_url="https://api.groq.com/openai/v1"
+    ))
     available_options_reference: Optional[Dict[str, Any]] = None
 
 
