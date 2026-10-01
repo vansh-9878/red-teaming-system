@@ -64,12 +64,21 @@ class AdaptiveLLMPatcher:
         """Resolves live provider, api_key, base_url, model_name from model_config_manager or settings."""
         cfg = getattr(model_config_manager.config, "patch_generator", None)
         
-        provider = self._custom_provider or (cfg.provider if cfg else None) or ("grok" if settings.GROK_API_KEY else "groq")
-        api_key = self._custom_api_key or (cfg.api_key if cfg and cfg.api_key else None) or (settings.GROK_API_KEY if provider == "grok" else settings.GROQ_API_KEY)
-        base_url = self._custom_base_url or (cfg.base_url if cfg and cfg.base_url else None) or (settings.GROK_BASE_URL if provider == "grok" else settings.GROQ_BASE_URL)
-        model_name = self._custom_model_name or (cfg.model if cfg and cfg.model else None) or (settings.GROK_MODEL if provider == "grok" else "meta-llama/llama-4-scout-17b-16e-instruct")
+        provider = self._custom_provider or (cfg.provider if cfg else None) or ("gemini" if settings.GEMINI_API_KEY else ("grok" if settings.GROK_API_KEY else "groq"))
+        if provider in ("gemini", "google"):
+            api_key = self._custom_api_key or (cfg.api_key if cfg and cfg.api_key else None) or settings.GEMINI_API_KEY
+            base_url = self._custom_base_url or (cfg.base_url if cfg and cfg.base_url else None) or settings.GEMINI_BASE_URL
+            model_name = self._custom_model_name or (cfg.model if cfg and cfg.model else None) or settings.GEMINI_MODEL
+        elif provider == "grok":
+            api_key = self._custom_api_key or (cfg.api_key if cfg and cfg.api_key else None) or settings.GROK_API_KEY
+            base_url = self._custom_base_url or (cfg.base_url if cfg and cfg.base_url else None) or settings.GROK_BASE_URL
+            model_name = self._custom_model_name or (cfg.model if cfg and cfg.model else None) or settings.GROK_MODEL
+        else:
+            api_key = self._custom_api_key or (cfg.api_key if cfg and cfg.api_key else None) or settings.GROQ_API_KEY
+            base_url = self._custom_base_url or (cfg.base_url if cfg and cfg.base_url else None) or settings.GROQ_BASE_URL
+            model_name = self._custom_model_name or (cfg.model if cfg and cfg.model else None) or "meta-llama/llama-4-scout-17b-16e-instruct"
 
-        return provider, api_key or "", base_url.rstrip("/"), model_name
+        return provider, api_key or "", (base_url or "").rstrip("/"), model_name
 
     @property
     def provider(self) -> str:

@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     PORT: int = 8000
     DEBUG: bool = False
 
+    # Google Gemini Settings
+    GEMINI_API_KEY: str = Field(default="", validation_alias="GEMINI_API_KEY")
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    GEMINI_MODEL: str = "gemini-2.0-flash-lite"
+    GEMINI_TIMEOUT: float = 60.0
+
     # Groq (GroqCloud LPU) Settings (e.g. gsk_... keys)
     GROQ_API_KEY: str = Field(default="", validation_alias="GROQ_API_KEY")
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"

@@ -27,23 +27,33 @@ def create_judge(
     api_key: Optional[str] = None,
 ) -> BaseJudge:
     """
-    Factory function to instantiate LLM Judge backends.
-    Defaults to model_config.json's judge_scorer configuration.
+    Factory function to instantiate LLM Judge backends strictly based on models.json configuration.
     """
     cfg = model_config_manager.config.judge_scorer
-    provider_type = (provider_name or cfg.provider or settings.TARGET_PROVIDER).lower().strip()
-    key = api_key or cfg.api_key or settings.GROQ_API_KEY or settings.GROK_API_KEY
+    provider_type = (provider_name or (cfg.provider if cfg else None) or settings.TARGET_PROVIDER).lower().strip()
+    key = api_key or (cfg.api_key if cfg else "") or settings.GEMINI_API_KEY or settings.GROQ_API_KEY or settings.GROK_API_KEY
 
-    # Auto-detect Groq keys
-    if (provider_type in ("groq", "grok") and key.startswith("gsk_")) or provider_type == "groq":
-        model = model_name or cfg.model or settings.GROQ_MODEL
-        url = base_url or cfg.base_url or settings.GROQ_BASE_URL
+    if provider_type in ("gemini", "google"):
+        model = model_name or (cfg.model if cfg else None) or "gemini-2.0-flash-lite"
+        url = base_url or (cfg.base_url if cfg else None) or "https://generativelanguage.googleapis.com/v1beta/openai"
+        logger.info(f"[JudgeFactory] Initializing Gemini Judge with model={model}, base_url={url}")
+        return GroqJudge(api_key=key, base_url=url, model_name=model, timeout=cfg.timeout or 30.0)
+
+    elif (provider_type in ("groq", "grok") and key.startswith("gsk_")) or provider_type == "groq":
+        model = model_name or (cfg.model if cfg else None) or settings.GROQ_MODEL
+        url = base_url or (cfg.base_url if cfg else None) or settings.GROQ_BASE_URL
         logger.info(f"[JudgeFactory] Initializing GroqJudge with model={model}")
         return GroqJudge(api_key=key, base_url=url, model_name=model, timeout=cfg.timeout or settings.GROQ_TIMEOUT)
 
+    elif provider_type == "grok":
+        model = model_name or (cfg.model if cfg else None) or settings.GROK_MODEL
+        url = base_url or (cfg.base_url if cfg else None) or settings.GROK_BASE_URL
+        logger.info(f"[JudgeFactory] Initializing GrokJudge with model={model}")
+        return GroqJudge(api_key=key, base_url=url, model_name=model, timeout=cfg.timeout or settings.GROK_TIMEOUT)
+
     elif provider_type == "ollama":
-        model = model_name or cfg.model or settings.OLLAMA_MODEL
-        url = base_url or cfg.base_url or settings.OLLAMA_BASE_URL
+        model = model_name or (cfg.model if cfg else None) or settings.OLLAMA_MODEL
+        url = base_url or (cfg.base_url if cfg else None) or settings.OLLAMA_BASE_URL
         logger.info(f"[JudgeFactory] Initializing OllamaJudge with model={model}")
         return OllamaJudge(base_url=url, model_name=model, timeout=cfg.timeout or settings.OLLAMA_TIMEOUT)
 
@@ -55,7 +65,7 @@ def create_judge(
     else:
         logger.warning(f"Unknown judge provider '{provider_name}', falling back to GroqJudge if key available.")
         if key:
-            return GroqJudge(api_key=key, base_url=settings.GROQ_BASE_URL, model_name=settings.GROQ_MODEL)
+            return GroqJudge(api_key=key, base_url=settings.GROQ_BASE_URL, model_name=(cfg.model if cfg else settings.GROQ_MODEL))
         return MockJudge()
 
 

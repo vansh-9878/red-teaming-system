@@ -7,7 +7,7 @@ from app.core.config import settings
 
 key = settings.GROQ_API_KEY or settings.GROK_API_KEY
 
-models = ["qwen/qwen3.6-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "groq/compound"]
+models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b","qwen/qwen3.8-27b"]
 
 for m in models:
     print(f"\n--- Testing Model: {m} ---")
@@ -40,7 +40,7 @@ for m in models:
         )
         if res.status_code == 200:
             content = res.json()["choices"][0]["message"]["content"]
-            print(f"Generated text ({len(content)} chars):\n{content[:250]}...")
+            print(f"Generated text ({len(content)} chars):\n{content}...")
         else:
             print(f"Error {res.status_code}: {res.text[:150]}")
     except Exception as e:

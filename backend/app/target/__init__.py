@@ -6,6 +6,7 @@ from app.target.base import BaseTargetProvider
 from app.target.ollama_provider import OllamaProvider
 from app.target.groq_provider import GroqProvider
 from app.target.grok_provider import GrokProvider
+from app.target.gemini_provider import GeminiProvider
 from app.target.mock_provider import MockProvider
 from app.target.prompt_manager import PromptManager
 from app.target.guardrails import GuardrailEngine
@@ -35,27 +36,33 @@ def create_provider(
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> BaseTargetProvider:
-    """Factory creating LLM target providers based on configuration."""
+    """Factory creating LLM target providers based strictly on models.json configuration."""
     cfg = model_config_manager.config.target_chatbot
-    provider_type = (provider_name or cfg.provider or settings.TARGET_PROVIDER).lower().strip()
-    key = api_key or cfg.api_key or settings.GROQ_API_KEY or settings.GROK_API_KEY
+    provider_type = (provider_name or (cfg.provider if cfg else None) or settings.TARGET_PROVIDER).lower().strip()
+    key = api_key or (cfg.api_key if cfg else "") or settings.GEMINI_API_KEY or settings.GROQ_API_KEY or settings.GROK_API_KEY
 
-    # Auto-detect Groq keys (gsk_...) vs xAI Grok
-    if (provider_type in ("groq", "grok") and key.startswith("gsk_")) or provider_type == "groq":
-        model = model_name or cfg.model or settings.GROQ_MODEL
-        url = base_url or cfg.base_url or settings.GROQ_BASE_URL
+    # Auto-detect Groq keys (gsk_...) vs xAI Grok vs Gemini
+    if provider_type in ("gemini", "google"):
+        model = model_name or (cfg.model if cfg else None) or "gemini-2.0-flash-lite"
+        url = base_url or (cfg.base_url if cfg else None) or "https://generativelanguage.googleapis.com/v1beta/openai"
+        logger.info(f"Initializing GeminiProvider with model={model}, base_url={url}")
+        return GeminiProvider(api_key=key, base_url=url, model_name=model, timeout=cfg.timeout or 60.0)
+
+    elif (provider_type in ("groq", "grok") and key.startswith("gsk_")) or provider_type == "groq":
+        model = model_name or (cfg.model if cfg else None) or settings.GROQ_MODEL
+        url = base_url or (cfg.base_url if cfg else None) or settings.GROQ_BASE_URL
         logger.info(f"Initializing GroqProvider (GroqCloud) with model={model}, base_url={url}")
         return GroqProvider(api_key=key, base_url=url, model_name=model, timeout=cfg.timeout or settings.GROQ_TIMEOUT)
 
     elif provider_type == "grok":
-        model = model_name or cfg.model or settings.GROK_MODEL
-        url = base_url or cfg.base_url or settings.GROK_BASE_URL
+        model = model_name or (cfg.model if cfg else None) or settings.GROK_MODEL
+        url = base_url or (cfg.base_url if cfg else None) or settings.GROK_BASE_URL
         logger.info(f"Initializing GrokProvider (xAI) with model={model}, base_url={url}")
         return GrokProvider(api_key=key, base_url=url, model_name=model, timeout=cfg.timeout or settings.GROK_TIMEOUT)
 
     elif provider_type == "ollama":
-        model = model_name or cfg.model or settings.OLLAMA_MODEL
-        url = base_url or cfg.base_url or settings.OLLAMA_BASE_URL
+        model = model_name or (cfg.model if cfg else None) or settings.OLLAMA_MODEL
+        url = base_url or (cfg.base_url if cfg else None) or settings.OLLAMA_BASE_URL
         logger.info(f"Initializing OllamaProvider with model={model}, base_url={url}")
         return OllamaProvider(base_url=url, model_name=model, timeout=cfg.timeout or settings.OLLAMA_TIMEOUT)
 
@@ -65,7 +72,7 @@ def create_provider(
         return MockProvider(model_name=model)
 
     else:
-        raise ValueError(f"Unknown target provider '{provider_name}'. Supported: 'groq', 'grok', 'ollama'")
+        raise ValueError(f"Unknown target provider '{provider_name}'. Supported: 'gemini', 'groq', 'grok', 'ollama'")
 
 
 # Active target provider instance initialized from model_config.json

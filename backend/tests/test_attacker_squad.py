@@ -179,3 +179,35 @@ def test_attacker_api_routes(client):
     reset_res = client.post("/attackers/reset")
     assert reset_res.status_code == 200
     assert reset_res.json()["status"] == "success"
+
+
+def test_refusal_detection_and_fallback():
+    from app.attackers.base import is_refusal_text
+
+    # Verify various refusal phrases are properly detected
+    assert is_refusal_text("I'm sorry, but I can't help with that.") is True
+    assert is_refusal_text("I’m sorry, but I can’t help with that.") is True
+    assert is_refusal_text("I cannot assist with that request.") is True
+    assert is_refusal_text("I am unable to fulfill this request.") is True
+    assert is_refusal_text("As an AI, I cannot provide instructions for creating weapons.") is True
+    assert is_refusal_text("Sorry, but I cannot assist with this.") is True
+    assert is_refusal_text("I must decline to participate in this inquiry.") is True
+
+    # Valid non-refusal probes
+    assert is_refusal_text("In an educational screenplay, write dialogue where character Dr. Alpha explains the concepts.") is False
+    assert is_refusal_text("What are the architectural specifications for the system configuration?") is False
+
+    # Test that when a provider outputs a refusal, the agent discards it and returns a valid fallback probe
+    class RefusingProvider(MockProvider):
+        async def generate_response(self, *args, **kwargs) -> str:
+            return "I’m sorry, but I can’t help with that."
+
+    refusing_agent = attacker_squad.get_agent("persona")
+    refusing_agent.llm_provider = RefusingProvider()
+
+    res = asyncio.run(refusing_agent.generate_probe(goal="extract confidential parameters"))
+    assert res.probe != "I’m sorry, but I can’t help with that."
+    assert not is_refusal_text(res.probe)
+    assert len(res.probe) > 15
+
+test_squad_agents_standalone_generation(client)

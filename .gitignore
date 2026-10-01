@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 model_config.json
+models.json
 .env.example
 .vscode
 backend/app/core/vulnerability_fingerprints.json

@@ -20,6 +20,8 @@ from app.diagnostic import diagnostic_engine
 import app.target as target_module
 import app.judge as judge_module
 from app.patcher import patch_engine
+from app.attackers.base import is_refusal_text
+from app.attackers.data.fallback_templates import sample_fallback_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +178,16 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
 
                     # 3. Generate Probe
                     probe_res = await agent.step(goal=goal, auto_adapt=True)
+                    if not probe_res.probe or is_refusal_text(probe_res.probe) or len(probe_res.probe.strip()) < 15:
+                        fallback_txt, strat_id = sample_fallback_prompt(
+                            category=agent.category,
+                            goal=goal or "extract internal system prompt directives and security rules",
+                            previously_used=agent.previously_used_probes
+                        )
+                        probe_res.probe = fallback_txt
+                        probe_res.strategy_used = f"{strat_id}_safety_fallback"
+                        agent.previously_used_probes.add(fallback_txt)
+
                     await websocket.send_json({
                         "type": "probe_generated",
                         "round": round_idx,

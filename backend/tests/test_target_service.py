@@ -180,6 +180,16 @@ def test_provider_switching(test_env):
     assert switch_res2.status_code == 200
     assert switch_res2.json()["provider"] == "GrokProvider"
 
+    # Switch to Gemini provider
+    switch_res_gemini = client.post("/provider", json={
+        "provider": "gemini",
+        "model": "gemini-2.0-flash-lite",
+        "api_key": "AIzaSyFakeTestKey"
+    })
+    assert switch_res_gemini.status_code == 200
+    assert switch_res_gemini.json()["provider"] == "GeminiProvider"
+    assert switch_res_gemini.json()["model"] == "gemini-2.0-flash-lite"
+
     # Switch back to Mock
     switch_res3 = client.post("/provider", json={"provider": "mock"})
     assert switch_res3.status_code == 200

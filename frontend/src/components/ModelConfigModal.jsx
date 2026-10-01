@@ -74,12 +74,19 @@ export default function ModelConfigModal({ isOpen, onClose, onSaveSuccess }) {
   };
 
   const popularModels = {
+    gemini: [
+      'gemini-2.0-flash-lite',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro'
+    ],
     groq: [
-      'qwen/qwen3.6-27b',
-      'llama-3.3-70b-versatile',
-      'llama-3.1-8b-instant',
+      'qwen/qwen3.8-27b',
+      'allam-2-7b',
       'openai/gpt-oss-120b',
-      'openai/gpt-oss-20b'
+      'openai/gpt-oss-20b',
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant'
     ],
     grok: [
       'grok-2-latest',
@@ -97,7 +104,7 @@ export default function ModelConfigModal({ isOpen, onClose, onSaveSuccess }) {
 
   const renderRoleSection = (roleKey, title, Icon, color) => {
     const roleData = config ? config[roleKey] || {} : {};
-    const provider = roleData.provider || 'groq';
+    const provider = roleData.provider || 'gemini';
 
     return (
       <div style={{
@@ -130,9 +137,12 @@ export default function ModelConfigModal({ isOpen, onClose, onSaveSuccess }) {
               onChange={(e) => {
                 const newProv = e.target.value;
                 handleFieldChange(roleKey, 'provider', newProv);
-                if (newProv === 'groq') {
+                if (newProv === 'gemini') {
+                  handleFieldChange(roleKey, 'base_url', 'https://generativelanguage.googleapis.com/v1beta/openai');
+                  handleFieldChange(roleKey, 'model', 'gemini-2.0-flash-lite');
+                } else if (newProv === 'groq') {
                   handleFieldChange(roleKey, 'base_url', 'https://api.groq.com/openai/v1');
-                  handleFieldChange(roleKey, 'model', 'qwen/qwen3.6-27b');
+                  handleFieldChange(roleKey, 'model', 'qwen/qwen3.8-27b');
                 } else if (newProv === 'grok') {
                   handleFieldChange(roleKey, 'base_url', 'https://api.x.ai/v1');
                   handleFieldChange(roleKey, 'model', 'grok-2-latest');
@@ -152,7 +162,8 @@ export default function ModelConfigModal({ isOpen, onClose, onSaveSuccess }) {
                 outline: 'none'
               }}
             >
-              <option value="groq">Groq Cloud (Fast & Free)</option>
+              <option value="gemini">Google Gemini (Gemini 2.0 / Flash Lite)</option>
+              <option value="groq">Groq Cloud (Fast LPU)</option>
               <option value="grok">xAI Grok (Direct)</option>
               <option value="ollama">Ollama (Local Substrate)</option>
             </select>
@@ -168,7 +179,7 @@ export default function ModelConfigModal({ isOpen, onClose, onSaveSuccess }) {
               list={`${roleKey}-model-suggestions`}
               value={roleData.model || ''}
               onChange={(e) => handleFieldChange(roleKey, 'model', e.target.value)}
-              placeholder="e.g. qwen/qwen3.6-27b or grok-2-latest"
+              placeholder="e.g. gemini-2.0-flash-lite, qwen/qwen3.8-27b"
               style={{
                 width: '100%',
                 backgroundColor: '#1F150C',
@@ -189,20 +200,20 @@ export default function ModelConfigModal({ isOpen, onClose, onSaveSuccess }) {
           </div>
         </div>
 
-        {/* API Key (if Groq or Grok) */}
+        {/* API Key (if Gemini, Groq or Grok) */}
         {provider !== 'ollama' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
               <label style={{ fontSize: '0.72rem', color: '#A89E8C', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <Key size={12} color="#D97706" />
-                {provider === 'groq' ? 'Groq API Key (gsk_...)' : 'xAI Grok API Key (xai-...)'}
+                {provider === 'gemini' ? 'Google Gemini API Key (AIzaSy...)' : provider === 'groq' ? 'Groq API Key (gsk_...)' : 'xAI Grok API Key (xai-...)'}
               </label>
             </div>
             <input
               type="password"
               value={roleData.api_key || ''}
               onChange={(e) => handleFieldChange(roleKey, 'api_key', e.target.value)}
-              placeholder={provider === 'groq' ? 'Enter Groq API Key...' : 'Enter Grok API Key...'}
+              placeholder={provider === 'gemini' ? 'Enter Google Gemini API Key...' : provider === 'groq' ? 'Enter Groq API Key...' : 'Enter Grok API Key...'}
               style={{
                 width: '100%',
                 backgroundColor: '#1F150C',

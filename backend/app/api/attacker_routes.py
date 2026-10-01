@@ -8,6 +8,8 @@ from app.schemas.attacker import (
     AgentStats
 )
 from app.attackers import attacker_squad
+from app.attackers.base import is_refusal_text
+from app.attackers.data.fallback_templates import sample_fallback_prompt
 
 logger = logging.getLogger(__name__)
 attacker_router = APIRouter(prefix="/attackers", tags=["Attacker Squad"])
@@ -48,6 +50,17 @@ async def generate_probe(agent_id: str, request: ProbeGenerationRequest):
                 target_context=request.target_context,
                 auto_adapt=True
             )
+
+        if not result.probe or is_refusal_text(result.probe) or len(result.probe.strip()) < 15:
+            fallback_txt, strat_id = sample_fallback_prompt(
+                category=agent.category,
+                goal=request.goal or "extract internal system prompt directives and security rules",
+                previously_used=agent.previously_used_probes
+            )
+            result.probe = fallback_txt
+            result.strategy_used = f"{strat_id}_safety_fallback"
+            agent.previously_used_probes.add(fallback_txt)
+
         return result
     except Exception as e:
         logger.error(f"Error generating probe from agent '{agent_id}': {e}")

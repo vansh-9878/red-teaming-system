@@ -71,7 +71,7 @@ class ReloadResponse(BaseModel):
 
 
 class ProviderSwitchRequest(BaseModel):
-    provider: Literal["mock", "ollama", "groq", "grok"]
+    provider: Literal["mock", "ollama", "groq", "grok", "gemini", "google"]
     model: Optional[str] = None
     base_url: Optional[str] = None
     api_key: Optional[str] = None
