@@ -4,6 +4,7 @@ import ChatInterface from './components/ChatInterface';
 import AnalyticsView from './components/AnalyticsView';
 import ProbeInspector from './components/ProbeInspector';
 import PatchGeneratorView from './components/PatchGeneratorView';
+import VerifierView from './components/VerifierView';
 import ModelConfigModal from './components/ModelConfigModal';
 
 export default function App() {
@@ -288,6 +289,12 @@ export default function App() {
         <PatchGeneratorView
           messages={messages}
           campaignSummary={campaignSummary}
+        />
+      )}
+
+      {activeTab === 'verifier' && (
+        <VerifierView
+          messages={messages}
         />
       )}
 

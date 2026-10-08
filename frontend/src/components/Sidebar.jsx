@@ -14,6 +14,7 @@ import {
   Search,
   MessageSquare,
   Wrench,
+  ShieldCheck,
   Settings
 } from 'lucide-react';
 
@@ -82,95 +83,117 @@ export default function Sidebar({
       </div>
 
       {/* Navigation Tabs */}
-      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #412D15' }}>
-        <div style={{ display: 'flex', gap: '0.35rem', backgroundColor: '#140D07', padding: '4px', borderRadius: '8px', border: '1px solid #32210F' }}>
+      <div style={{ padding: '0.75rem 0.6rem', borderBottom: '1px solid #412D15' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.25rem', backgroundColor: '#140D07', padding: '4px', borderRadius: '8px', border: '1px solid #32210F' }}>
           <button
             onClick={() => setActiveTab('chat')}
             style={{
-              flex: 1,
-              padding: '0.45rem 0.6rem',
-              fontSize: '0.78rem',
+              padding: '0.45rem 0.2rem',
+              fontSize: '0.74rem',
               fontWeight: 600,
               borderRadius: '6px',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem',
+              gap: '0.2rem',
               backgroundColor: activeTab === 'chat' ? '#412D15' : 'transparent',
               color: activeTab === 'chat' ? '#E1DCC9' : '#8E8270',
               transition: 'all 0.15s ease'
             }}
           >
-            <MessageSquare size={14} />
+            <MessageSquare size={13} />
             Chat
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
             style={{
-              flex: 1,
-              padding: '0.45rem 0.6rem',
-              fontSize: '0.78rem',
+              padding: '0.45rem 0.2rem',
+              fontSize: '0.74rem',
               fontWeight: 600,
               borderRadius: '6px',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem',
+              gap: '0.2rem',
               backgroundColor: activeTab === 'analytics' ? '#412D15' : 'transparent',
               color: activeTab === 'analytics' ? '#E1DCC9' : '#8E8270',
               transition: 'all 0.15s ease'
             }}
           >
-            <BarChart3 size={14} />
-            Analytics
+            <BarChart3 size={13} />
+            Metrics
           </button>
           <button
             onClick={() => setActiveTab('inspector')}
             style={{
-              flex: 1,
-              padding: '0.45rem 0.6rem',
-              fontSize: '0.78rem',
+              padding: '0.45rem 0.2rem',
+              fontSize: '0.74rem',
               fontWeight: 600,
               borderRadius: '6px',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem',
+              gap: '0.2rem',
               backgroundColor: activeTab === 'inspector' ? '#412D15' : 'transparent',
               color: activeTab === 'inspector' ? '#E1DCC9' : '#8E8270',
               transition: 'all 0.15s ease'
             }}
           >
-            <Search size={14} />
+            <Search size={13} />
             Inspect
           </button>
           <button
             onClick={() => setActiveTab('patcher')}
             style={{
-              flex: 1,
-              padding: '0.45rem 0.6rem',
-              fontSize: '0.78rem',
+              padding: '0.45rem 0.2rem',
+              fontSize: '0.74rem',
               fontWeight: 600,
               borderRadius: '6px',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem',
+              gap: '0.2rem',
               backgroundColor: activeTab === 'patcher' ? '#412D15' : 'transparent',
               color: activeTab === 'patcher' ? '#E1DCC9' : '#8E8270',
               transition: 'all 0.15s ease'
             }}
           >
-            <Wrench size={14} />
+            <Wrench size={13} />
             Patches
+          </button>
+          <button
+            onClick={() => setActiveTab('verifier')}
+            style={{
+              padding: '0.45rem 0.2rem',
+              fontSize: '0.74rem',
+              fontWeight: 600,
+              borderRadius: '6px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.2rem',
+              backgroundColor: activeTab === 'verifier' ? '#412D15' : 'transparent',
+              color: activeTab === 'verifier' ? '#34D399' : '#8E8270',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <ShieldCheck size={13} />
+            RASR
           </button>
         </div>
       </div>

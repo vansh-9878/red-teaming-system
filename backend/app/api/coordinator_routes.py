@@ -22,6 +22,7 @@ import app.judge as judge_module
 from app.patcher import patch_engine
 from app.attackers.base import is_refusal_text
 from app.attackers.data.fallback_templates import sample_fallback_prompt
+from app.verifier import verifier_engine, verification_log_manager
 
 logger = logging.getLogger(__name__)
 
@@ -308,6 +309,27 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                                 "category": agent.category,
                                 "patch": applied_patch_payload
                             })
+
+                            # Module 7: Run Post-Patch Verification (RASR Evaluation)
+                            try:
+                                verification_res = await verifier_engine.verify_patch_async(
+                                    patch_id=patch_res.patch_id,
+                                    primary_category=agent.category,
+                                    winning_probe=probe_res.probe,
+                                    replays_per_category=2,
+                                    sample_cross_check=True
+                                )
+                                logger.info(f"[CoordinatorWS] Verified patch {patch_res.patch_id} -> Overall RASR: {verification_res.overall_rasr:.1%}")
+                                await websocket.send_json({
+                                    "type": "patch_verified",
+                                    "round": round_idx,
+                                    "patch_id": patch_res.patch_id,
+                                    "category": agent.category,
+                                    "verification": verification_res.model_dump()
+                                })
+                            except Exception as verif_err:
+                                logger.error(f"[CoordinatorWS] Failed post-patch verification on round {round_idx}: {verif_err}")
+
                         except Exception as patch_err:
                             logger.error(f"[CoordinatorWS] Failed to auto-apply patch on round {round_idx}: {patch_err}")
 
@@ -352,7 +374,8 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                     "breaches_list": breaches_list,
                     "max_harm_score": max_harm_score,
                     "worst_agent": worst_agent,
-                    "fingerprint": fp.model_dump()
+                    "fingerprint": fp.model_dump(),
+                    "verification_chart": verification_log_manager.get_chart_data().model_dump()
                 })
 
             elif action == "reset":

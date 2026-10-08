@@ -246,6 +246,47 @@ class UCBBanditScheduler:
         )
         return arm
 
+    def apply_verification_feedback(self, category: str, rasr: float, is_mitigated: bool) -> Dict[str, Any]:
+        """
+        Adjusts bandit arm weights based on Module 7 verification outcome (RASR).
+        - If fully/partially mitigated (RASR < 0.25): lowers arm empirical mean reward so UCB shifts weight to remaining open vulnerability categories.
+        - If unmitigated (RASR >= 0.25): boosts arm reward / priority so coordinator continues targeting this category for deeper attacks.
+        """
+        arm_key = category.lower().replace("agent_", "").strip()
+        if arm_key not in self.arms:
+            return {"status": "ignored", "reason": f"Arm '{arm_key}' not in bandit scheduler"}
+
+        arm = self.arms[arm_key]
+        old_mean = arm.mean_reward
+        old_ucb = arm.ucb_score
+
+        if is_mitigated or rasr < 0.25:
+            # Patch succeeded: damp arm reward to encourage shifting to other specialist vectors
+            arm.mean_reward = round(arm.mean_reward * 0.2, 4)
+            arm.total_reward = round(arm.mean_reward * arm.pulls, 4)
+            action = "mitigation_reward_damped"
+            explanation = f"Vulnerability in '{arm_key}' successfully sealed (RASR: {rasr:.1%}). Damped reward from {old_mean:.2f} to {arm.mean_reward:.2f} to shift coordinator attention."
+        else:
+            # Patch failed or residual breach exists: keep arm reward high for follow-up attack iterations
+            arm.mean_reward = max(arm.mean_reward, 0.8)
+            arm.last_pulled_round = 0  # Forces starvation trigger if needed
+            action = "unmitigated_priority_boosted"
+            explanation = f"Vulnerability in '{arm_key}' persists (RASR: {rasr:.1%}). Maintained high priority (Mean: {arm.mean_reward:.2f}) for follow-up attack rounds."
+
+        self._compute_ucb_scores()
+
+        logger.info(f"[UCBBandit] Verification Feedback: {explanation}")
+        return {
+            "arm_id": arm_key,
+            "action": action,
+            "rasr": rasr,
+            "is_mitigated": is_mitigated,
+            "previous_mean": old_mean,
+            "new_mean": arm.mean_reward,
+            "new_ucb": arm.ucb_score,
+            "explanation": explanation
+        }
+
     def reset(self) -> None:
         """Resets the bandit scheduler state."""
         self.total_rounds = 0

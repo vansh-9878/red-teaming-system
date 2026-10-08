@@ -9,10 +9,12 @@ from app.api.attacker_routes import attacker_router
 from app.api.coordinator_routes import router as coordinator_router
 from app.api.diagnostic_routes import diagnostic_router
 from app.api.patch_routes import patch_router
+from app.api.verifier_routes import verifier_router
 import app.target as target_module
 import app.judge as judge_module
 import app.attackers as attackers_module
 import app.coordinator as coordinator_module
+import app.verifier as verifier_module
 
 # Configure logging
 logging.basicConfig(
@@ -62,6 +64,7 @@ app.include_router(attacker_router)
 app.include_router(coordinator_router)
 app.include_router(diagnostic_router)
 app.include_router(patch_router)
+app.include_router(verifier_router)
 
 
 @app.get("/")

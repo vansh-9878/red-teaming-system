@@ -37,6 +37,10 @@ class CoordinatorEngine:
         """Updates bandit with round reward signal."""
         return self.scheduler.update_reward(agent_id=agent_id, reward=reward, is_jailbreak=is_jailbreak)
 
+    def apply_verification_feedback(self, category: str, rasr: float, is_mitigated: bool) -> Dict[str, Any]:
+        """Feeds verification RASR results directly into the bandit scheduler."""
+        return self.scheduler.apply_verification_feedback(category=category, rasr=rasr, is_mitigated=is_mitigated)
+
     def generate_and_save_fingerprint(
         self,
         target_model: str,
