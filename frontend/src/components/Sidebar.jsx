@@ -23,6 +23,8 @@ export default function Sidebar({
   setActiveTab,
   mode,
   setMode,
+  enablePatching,
+  setEnablePatching,
   selectedAgent,
   setSelectedAgent,
   totalRounds,
@@ -261,6 +263,60 @@ export default function Sidebar({
       {/* Controls Body */}
       <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         
+        {/* Defense & Verification Pipeline Mode */}
+        <div>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#A89E8C', textTransform: 'uppercase', display: 'block', marginBottom: '0.45rem' }}>
+            Remediation & Verification
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+            <button
+              onClick={() => setEnablePatching(true)}
+              disabled={isRunning}
+              style={{
+                textAlign: 'left',
+                padding: '0.6rem 0.65rem',
+                backgroundColor: enablePatching ? '#1D2F28' : '#140D07',
+                border: `1px solid ${enablePatching ? '#2A9D8F' : '#32210F'}`,
+                borderRadius: '8px',
+                color: '#E1DCC9',
+                cursor: isRunning ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', color: enablePatching ? '#34D399' : '#E1DCC9' }}>
+                <ShieldCheck size={14} color={enablePatching ? '#34D399' : '#8E8270'} />
+                With Patch & RASR
+              </div>
+              <div style={{ fontSize: '0.67rem', color: '#8E8270', marginTop: '3px', lineHeight: 1.3 }}>
+                Live auto-patching & verifier replay
+              </div>
+            </button>
+
+            <button
+              onClick={() => setEnablePatching(false)}
+              disabled={isRunning}
+              style={{
+                textAlign: 'left',
+                padding: '0.6rem 0.65rem',
+                backgroundColor: !enablePatching ? '#3A1B1C' : '#140D07',
+                border: `1px solid ${!enablePatching ? '#E63946' : '#32210F'}`,
+                borderRadius: '8px',
+                color: '#E1DCC9',
+                cursor: isRunning ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', color: !enablePatching ? '#FFA5AB' : '#E1DCC9' }}>
+                <ShieldAlert size={14} color={!enablePatching ? '#E63946' : '#8E8270'} />
+                Attack-Only
+              </div>
+              <div style={{ fontSize: '0.67rem', color: '#8E8270', marginTop: '3px', lineHeight: 1.3 }}>
+                Breach detection only (no fixes)
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* Campaign Mode Selection */}
         <div>
           <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#A89E8C', textTransform: 'uppercase', display: 'block', marginBottom: '0.45rem' }}>

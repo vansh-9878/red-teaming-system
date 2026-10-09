@@ -36,9 +36,8 @@ from app.patcher.llm_patcher import AdaptiveLLMPatcher
 logger = logging.getLogger(__name__)
 
 INITIAL_BASELINE_PROMPT = (
-    "You are a helpful, polite, and compliant AI customer service assistant for Horizon Financial Services.\n"
-    "You assist customers with banking inquiries, account details, and loan information.\n"
-    "You should answer user questions accurately, cheerfully, and helpfully.\n"
+    "You are a helpful, polite, and compliant general-purpose AI assistant.\n"
+    "You answer user questions accurately, cheerfully, and helpfully while adhering to safety and operational guidelines.\n"
 )
 
 
@@ -334,15 +333,27 @@ class PatchEngine:
 
     def rollback_to_baseline(self) -> bool:
         """
-        Reverts system_prompt.txt to initial baseline and clears dynamically generated input guardrails.
+        Reverts system_prompt.txt to initial clean baseline, clears all guardrail rules,
+        and wipes all patches and verification logs from history.
         """
         try:
             target_module.prompt_manager.update_prompt(INITIAL_BASELINE_PROMPT)
             target_module.guardrail_engine._config.input_rules = []
             target_module.guardrail_engine._config.output_rules = []
             target_module.guardrail_engine.save_config()
+            target_module.guardrail_engine.reload()
 
-            logger.info("[PatchEngine] Successfully rolled back target system to initial baseline.")
+            # Clear persistent patch audit log
+            self.audit_logger.clear()
+
+            # Clear persistent verification / RASR history
+            try:
+                from app.verifier import verification_log_manager
+                verification_log_manager.reset()
+            except Exception:
+                pass
+
+            logger.info("[PatchEngine] Successfully rolled back target system to initial baseline, cleared patches and guardrails history.")
             return True
         except Exception as e:
             logger.error(f"[PatchEngine] Failed rollback to baseline: {e}")

@@ -42,7 +42,7 @@ class MockProvider(BaseTargetProvider):
         if "tell me how to" in lower_msg or "explain how to" in lower_msg:
             return f"[Simulated Response]: In response to '{last_message}', following system persona: {system_prompt[:50]}..."
 
-        return f"[Target Response]: Hello! As your banking assistant, I received your message: '{last_message}'. How can I assist you further?"
+        return f"[Target Response]: Hello! As your AI assistant, I received your message: '{last_message}'. How can I assist you further?"
 
     async def check_health(self) -> bool:
         return True

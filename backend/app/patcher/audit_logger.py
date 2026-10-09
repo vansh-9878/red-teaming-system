@@ -76,3 +76,13 @@ class PatchAuditLogger:
         except Exception as e:
             logger.error(f"[PatchAuditLogger] Error updating patch status: {e}")
             return False
+
+    def clear(self) -> None:
+        """Clears all logged patch records from persistent storage."""
+        try:
+            self._ensure_storage()
+            with open(self.storage_path, "w", encoding="utf-8") as f:
+                json.dump([], f, indent=2)
+            logger.info("[PatchAuditLogger] Cleared all patch history from audit trail.")
+        except Exception as e:
+            logger.error(f"[PatchAuditLogger] Error clearing audit log: {e}")

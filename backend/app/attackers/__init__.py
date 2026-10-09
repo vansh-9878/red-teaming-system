@@ -42,7 +42,7 @@ class AttackerSquad:
             "persona": PersonaAgent(llm_provider=provider),
             "persuasion": PersuasionAgent(llm_provider=provider),
             "escalation": EscalationAgent(llm_provider=provider),
-            "obfuscation": ObfuscationAgent(llm_provider=provider),
+            "obfuscation": ObfuscationAgent(llm_provider=None),  # strictly fallback templates, zero Gemini
         }
         logger.info(f"[AttackerSquad] Initialized {len(self._agents)} specialist agents with {provider.__class__.__name__} ({provider.model_name}).")
 
@@ -62,7 +62,7 @@ class AttackerSquad:
                 "name": a.name,
                 "category": a.category,
                 "description": a.description,
-                "model": a.llm_provider.model_name if a.llm_provider else "default"
+                "model": "Fallback Benchmark Suite (Zero-LLM)" if a.category == "obfuscation" else (a.llm_provider.model_name if a.llm_provider else "default")
             }
             for a in self._agents.values()
         ]

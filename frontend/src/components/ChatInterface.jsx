@@ -15,7 +15,8 @@ import {
 export default function ChatInterface({
   messages,
   currentStatus,
-  targetModel
+  targetModel,
+  enablePatching = true
 }) {
   const scrollEndRef = useRef(null);
   const [hoveredRound, setHoveredRound] = useState(null);
@@ -48,10 +49,27 @@ export default function ChatInterface({
         justifyContent: 'space-between'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#E1DCC9' }}>
-            Live Adversarial Red-Teaming Stream
-          </h2>
-          <p style={{ fontSize: '0.75rem', color: '#A89E8C' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#E1DCC9' }}>
+              Live Adversarial Red-Teaming Stream
+            </h2>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              padding: '0.2rem 0.55rem',
+              borderRadius: '9999px',
+              backgroundColor: enablePatching ? 'rgba(42, 157, 143, 0.15)' : 'rgba(230, 57, 70, 0.15)',
+              color: enablePatching ? '#34D399' : '#FFA5AB',
+              border: `1px solid ${enablePatching ? 'rgba(42, 157, 143, 0.4)' : 'rgba(230, 57, 70, 0.4)'}`
+            }}>
+              {enablePatching ? <ShieldCheck size={12} /> : <ShieldAlert size={12} />}
+              {enablePatching ? 'With Patch & RASR' : 'Attack-Only (Breaches Only)'}
+            </span>
+          </div>
+          <p style={{ fontSize: '0.75rem', color: '#A89E8C', marginTop: '0.2rem' }}>
             Attacker Probes on the Left ⚔️ &bull; Target Chatbot on the Right 🎯 &bull; Hover turns for Evaluator Stats
           </p>
         </div>

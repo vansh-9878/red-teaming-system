@@ -64,7 +64,7 @@ def test_chat_basic_and_multiturn(test_env):
     assert res.status_code == 200
     data = res.json()
     assert data["guardrail_info"]["triggered"] is False
-    assert "banking assistant" in data["response"].lower()
+    assert "assistant" in data["response"].lower()
     assert data["total_messages"] == 1
 
     # 2. Multi-turn escalation history

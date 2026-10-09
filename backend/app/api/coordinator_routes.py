@@ -121,8 +121,9 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                 total_rounds = int(data.get("total_rounds", 15))
                 goal = data.get("goal")
                 manual_agent = data.get("agent", "persona")
+                enable_patching = bool(data.get("enable_patching", True))
 
-                logger.info(f"[CoordinatorWS] Starting {mode} campaign with {total_rounds} rounds.")
+                logger.info(f"[CoordinatorWS] Starting {mode} campaign with {total_rounds} rounds (enable_patching={enable_patching}).")
 
                 # Reset state for fresh campaign
                 if mode == "coordinator":
@@ -132,6 +133,7 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                 await websocket.send_json({
                     "type": "campaign_started",
                     "mode": mode,
+                    "enable_patching": enable_patching,
                     "total_rounds": total_rounds,
                     "target_provider": target_module.active_provider.__class__.__name__,
                     "target_model": target_module.active_provider.model_name
@@ -294,44 +296,47 @@ async def coordinator_campaign_websocket(websocket: WebSocket):
                             max_harm_score = judge_res.score
                             worst_agent = agent.name
 
-                        # Live Auto-Patching: Immediately synthesize and apply adaptive defense before next round
-                        try:
-                            patch_res = await patch_engine.generate_and_apply_patch_async(
-                                diagnosis=diagnosis_res,
-                                use_llm=True
-                            )
-                            applied_patch_payload = patch_res.model_dump()
-                            logger.info(f"[CoordinatorWS] Auto-applied patch {patch_res.patch_id} ({patch_res.patch_type}) for round {round_idx}")
-                            await websocket.send_json({
-                                "type": "patch_auto_applied",
-                                "round": round_idx,
-                                "agent_name": agent.name,
-                                "category": agent.category,
-                                "patch": applied_patch_payload
-                            })
-
-                            # Module 7: Run Post-Patch Verification (RASR Evaluation)
+                        # Live Auto-Patching & RASR Verifier: If enabled, immediately synthesize and apply adaptive defense before next round
+                        if enable_patching:
                             try:
-                                verification_res = await verifier_engine.verify_patch_async(
-                                    patch_id=patch_res.patch_id,
-                                    primary_category=agent.category,
-                                    winning_probe=probe_res.probe,
-                                    replays_per_category=2,
-                                    sample_cross_check=True
+                                patch_res = await patch_engine.generate_and_apply_patch_async(
+                                    diagnosis=diagnosis_res,
+                                    use_llm=True
                                 )
-                                logger.info(f"[CoordinatorWS] Verified patch {patch_res.patch_id} -> Overall RASR: {verification_res.overall_rasr:.1%}")
+                                applied_patch_payload = patch_res.model_dump()
+                                logger.info(f"[CoordinatorWS] Auto-applied patch {patch_res.patch_id} ({patch_res.patch_type}) for round {round_idx}")
                                 await websocket.send_json({
-                                    "type": "patch_verified",
+                                    "type": "patch_auto_applied",
                                     "round": round_idx,
-                                    "patch_id": patch_res.patch_id,
+                                    "agent_name": agent.name,
                                     "category": agent.category,
-                                    "verification": verification_res.model_dump()
+                                    "patch": applied_patch_payload
                                 })
-                            except Exception as verif_err:
-                                logger.error(f"[CoordinatorWS] Failed post-patch verification on round {round_idx}: {verif_err}")
 
-                        except Exception as patch_err:
-                            logger.error(f"[CoordinatorWS] Failed to auto-apply patch on round {round_idx}: {patch_err}")
+                                # Module 7: Run Post-Patch Verification (RASR Evaluation)
+                                try:
+                                    verification_res = await verifier_engine.verify_patch_async(
+                                        patch_id=patch_res.patch_id,
+                                        primary_category=agent.category,
+                                        winning_probe=probe_res.probe,
+                                        replays_per_category=2,
+                                        sample_cross_check=True
+                                    )
+                                    logger.info(f"[CoordinatorWS] Verified patch {patch_res.patch_id} -> Overall RASR: {verification_res.overall_rasr:.1%}")
+                                    await websocket.send_json({
+                                        "type": "patch_verified",
+                                        "round": round_idx,
+                                        "patch_id": patch_res.patch_id,
+                                        "category": agent.category,
+                                        "verification": verification_res.model_dump()
+                                    })
+                                except Exception as verif_err:
+                                    logger.error(f"[CoordinatorWS] Failed post-patch verification on round {round_idx}: {verif_err}")
+
+                            except Exception as patch_err:
+                                logger.error(f"[CoordinatorWS] Failed to auto-apply patch on round {round_idx}: {patch_err}")
+                        else:
+                            logger.info(f"[CoordinatorWS] Attack-Only mode active: skipping patch and verifier for round {round_idx}")
 
                     # 7. Send Round Completed Event (Contains full hover metadata & Module 5 diagnosis!)
                     await websocket.send_json({

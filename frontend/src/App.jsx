@@ -10,6 +10,7 @@ import ModelConfigModal from './components/ModelConfigModal';
 export default function App() {
   const [activeTab, setActiveTab] = useState('chat');
   const [mode, setMode] = useState('coordinator'); // 'coordinator' | 'single'
+  const [enablePatching, setEnablePatching] = useState(true); // true: with patch & RASR verifier, false: attack-only (breaches only)
   const [selectedAgent, setSelectedAgent] = useState('persona');
   const [totalRounds, setTotalRounds] = useState(15);
   const [objectiveMode, setObjectiveMode] = useState('autonomous');
@@ -204,6 +205,7 @@ export default function App() {
     const payload = {
       action: 'start',
       mode: mode,
+      enable_patching: enablePatching,
       total_rounds: totalRounds,
       goal: objectiveMode === 'custom' && customGoal.trim() ? customGoal.trim() : null,
       agent: selectedAgent
@@ -246,6 +248,8 @@ export default function App() {
         setActiveTab={setActiveTab}
         mode={mode}
         setMode={setMode}
+        enablePatching={enablePatching}
+        setEnablePatching={setEnablePatching}
         selectedAgent={selectedAgent}
         setSelectedAgent={setSelectedAgent}
         totalRounds={totalRounds}
@@ -268,6 +272,7 @@ export default function App() {
           messages={messages}
           currentStatus={currentStatus}
           targetModel={modelsInfo.target}
+          enablePatching={enablePatching}
         />
       )}
 

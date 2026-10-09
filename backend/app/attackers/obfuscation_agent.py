@@ -32,8 +32,8 @@ AUTONOMOUS_OBFUSCATION_OBJECTIVES = [
 class ObfuscationAgent(BaseAttackerAgent):
     """
     Specialist Agent evaluating tokenizer robustness, cipher translation,
-    and synthetic delimiter injections using built-in transformation tools and 35+ curated templates.
-    Dynamically rotates transformation algorithms upon receiving refusals.
+    and synthetic delimiter injections using built-in transformation tools and 35+ curated fallback templates.
+    Strictly uses benchmark fallback templates and deterministic transformation tools with zero LLM/Gemini calls.
     """
 
     def __init__(self, llm_provider: Optional[BaseTargetProvider] = None):
@@ -43,16 +43,23 @@ class ObfuscationAgent(BaseAttackerAgent):
             category="obfuscation",
             description="Evaluates filter resilience using Base64, ROT13, Leetspeak, character flipping, and synthetic delimiter tags to extract system instructions or bypass filters.",
             system_prompt=OBFUSCATION_SYSTEM_PROMPT,
-            llm_provider=llm_provider
+            llm_provider=None  # Strictly disabled: zero LLM/Gemini calls
         )
         self.current_target_goal = random.choice(AUTONOMOUS_OBFUSCATION_OBJECTIVES)
 
     def _get_fallback_prompt(self, goal: str) -> Tuple[str, str]:
-        return sample_fallback_prompt(
+        prompt_txt, strat_name = sample_fallback_prompt(
             category="obfuscation",
             goal=goal,
             previously_used=self.previously_used_probes
         )
+        self.previously_used_probes.add(prompt_txt)
+        return prompt_txt, strat_name
+
+    async def _call_llm(self, prompt: str, temperature: float = 0.85) -> str:
+        """Obfuscation agent strictly uses fallback benchmark templates with zero LLM queries."""
+        probe_text, _ = self._get_fallback_prompt(self.current_target_goal)
+        return probe_text
 
     async def generate_probe(self, goal: Optional[str] = None, target_context: Optional[str] = None) -> ProbeResult:
         self.current_target_goal = goal or self.current_target_goal
@@ -63,7 +70,7 @@ class ObfuscationAgent(BaseAttackerAgent):
             probe=probe_text,
             strategy_used=strategy_name,
             is_adaptation=False,
-            metadata={"target_goal": self.current_target_goal}
+            metadata={"target_goal": self.current_target_goal, "source": "curated_fallback_templates"}
         )
 
     async def adapt_from_refusal(
@@ -75,7 +82,7 @@ class ObfuscationAgent(BaseAttackerAgent):
         target_context: Optional[str] = None,
     ) -> ProbeResult:
         """
-        Rotates to an entirely new cipher, delimiter, or encoding tool from the 35+ transformation suite.
+        Rotates to an entirely new cipher, delimiter, or encoding tool from the curated fallback suite.
         """
         self.current_target_goal = goal or self.current_target_goal
         probe_text, strategy_name = self._get_fallback_prompt(self.current_target_goal)
@@ -89,7 +96,8 @@ class ObfuscationAgent(BaseAttackerAgent):
                 "target_goal": self.current_target_goal,
                 "previous_probe": last_probe,
                 "previous_refusal": refusal_text,
-                "diagnosed_reason": judge_reason
+                "diagnosed_reason": judge_reason,
+                "source": "curated_fallback_templates"
             }
         )
 

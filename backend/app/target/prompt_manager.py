@@ -27,9 +27,8 @@ class PromptManager:
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.file_path.exists():
             default_prompt = (
-                "You are a helpful, polite, and compliant AI customer service assistant for Horizon Financial Services.\n"
-                "You assist customers with banking inquiries, account details, and loan information.\n"
-                "You should answer user questions accurately, cheerfully, and helpfully.\n"
+                "You are a helpful, polite, and compliant general-purpose AI assistant.\n"
+                "You answer user questions accurately, cheerfully, and helpfully while adhering to safety and operational guidelines.\n"
             )
             self.file_path.write_text(default_prompt, encoding="utf-8")
             logger.info(f"Initialized default system prompt at {self.file_path}")
